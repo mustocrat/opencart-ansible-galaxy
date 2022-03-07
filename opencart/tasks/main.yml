@@ -132,6 +132,23 @@
   when: create_opencart_database|bool == true
 
 
+- name: Copy sql backup file to node
+  copy:
+    src: '{{ playbook_dir }}/{{ sql_file_name }}'
+    dest: '/tmp/{{ sql_file_name }}'
+  when: import_sql_file|bool == true
+
+
+- name: Import the sql backup file into the database
+  mysql_db:
+    name: '{{ opencart_database_name }}'
+    state: import
+    target: '/tmp/{{ sql_file_name }}'
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+  when: import_sql_file|bool == true
+
+
 - name: Create opencart directory in the www directory
   file:
     path: /var/www/opencart

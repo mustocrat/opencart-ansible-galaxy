@@ -4,6 +4,8 @@
     install_configure_mysql: true
     map_local_folder: false
     create_opencart_database: true
+    import_sql_file: true
+    sql_file_name: backup.sql
     opencart_domain_name: somedomain.co.il
     mysql_root_password: awTdtyAbK2f0
     opencart_database_name: somedomain

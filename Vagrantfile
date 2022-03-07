@@ -10,8 +10,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     config.vm.box = "generic/ubuntu2004"
     config.vm.box_version = "3.1.16"
     config.vm.network :forwarded_port, guest: 443, host: 8080
-    #config.vm.synced_folder "/home/ubuntu/Workspace/opencart/somedomain.co.il/", "/var/www/opencart",
-    #  owner: "www-data", group: "www-data"
+    config.vm.synced_folder "/home/msaadi/Workspace/opencart/domain.co.il/", "/var/www/opencart",
+      owner: "www-data", group: "www-data"
     config.vm.provision:shell, inline: <<-SHELL
         echo "root:rootroot" | sudo chpasswd
         sudo timedatectl set-timezone Asia/Jerusalem

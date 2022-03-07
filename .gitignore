@@ -1,4 +1,5 @@
 .vagrant/
 *.log
+*.sql
 github_pat
 test-playbook.yml
