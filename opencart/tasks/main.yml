@@ -1,0 +1,204 @@
+---
+# tasks file for opencart
+- name: Update and upgrade apt packages
+  become: true
+  apt:
+    upgrade: yes
+    update_cache: yes
+    cache_valid_time: 86400 #One day
+
+
+- name: Install dependencies along with nginx
+  become: yes
+  apt:
+    pkg:
+      - software-properties-common
+      - libssl-dev
+      - nginx
+      - python3-mysqldb
+    state: latest
+
+
+- name: Add PHP 8.0 repository into sources list
+  become: yes
+  apt_repository:
+    repo: ppa:ondrej/php
+
+
+- name: Install PHP 8.0 with all required extensions 
+  become: yes
+  apt:
+    pkg:
+      - php8.0
+      - php8.0-cli
+      - php8.0-fpm
+      - php8.0-mysql
+      - php8.0-curl
+      - php8.0-gd
+      - php8.0-zip
+      - php8.0-common
+      - php8.0-imap
+      - php8.0-xml
+    state: latest
+    update_cache: yes
+
+
+- name: Install mysql server & client
+  become: yes
+  apt:
+    pkg:
+      - mysql-client
+      - mysql-common
+      - mysql-server
+    state: latest
+  when: install_configure_mysql|bool == true
+
+
+- name: Adjust php-fpm ini settings
+  lineinfile:
+    dest: /etc/php/8.0/fpm/php.ini
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  loop:
+    - { regexp: 'max_execution_time = 30', line: 'max_execution_time = 180' }
+    - { regexp: 'max_input_time = 60', line: 'max_input_time = 180' }
+    - { regexp: 'upload_max_filesize = 2M', line: 'upload_max_filesize = 50M' }
+    - { regexp: 'post_max_size = 8M', line: 'post_max_size = 50M' }
+
+
+- name: Restart nginx, php8.0-fpm, mysql services
+  become: yes
+  service:
+    name: "{{ item }}"
+    state: restarted
+  with_items:
+    - nginx
+    - php8.0-fpm
+    - "{% if install_configure_mysql|bool == true %}mysql{% endif %}"
+
+
+- name: Update mysql root password for all root accounts
+  become: yes
+  mysql_user:
+    name: root
+    password: "{{ mysql_root_password }}"
+    host: "{{ item }}"
+    check_implicit_admin: yes
+    priv: "*.*:ALL,GRANT"
+  with_items:
+    - 127.0.0.1
+    - ::1
+    - localhost
+  when: install_configure_mysql|bool == true
+
+
+- name: Delete mysql anonymous user
+  mysql_user:
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    user: ""
+    host_all: yes
+    state: absent
+  when: install_configure_mysql|bool == true
+
+
+- name: Removes the test database
+  mysql_db:
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    db: test
+    state: absent
+  when: install_configure_mysql|bool == true
+
+
+- name: Create a new opencart mysql database
+  become: yes
+  mysql_db:
+    login_user: root
+    login_password: "{{ mysql_root_password }}"
+    name: "{{ opencart_database_name }}"
+    state: present
+  when: create_opencart_database|bool == true
+
+
+- name: Create database user with all database privileges
+  mysql_user:
+    login_user: root
+    login_password: '{{ mysql_root_password }}'
+    name: "{{ opencart_database_user }}"
+    password: "{{ opencart_database_password }}"
+    priv: '{{ opencart_database_name }}.*:ALL'
+    state: present
+  when: create_opencart_database|bool == true
+
+
+- name: Create opencart directory in the www directory
+  file:
+    path: /var/www/opencart
+    state: directory
+  when: map_local_folder|bool == false
+
+
+- name: Download and unarchive latest official release  #current ver. 3.0.3.8
+  unarchive:
+    src: https://github.com/opencart/opencart/releases/download/3.0.3.8/opencart-3.0.3.8.zip
+    dest: /var/www/opencart
+    creates: /var/www/opencart/upload
+    remote_src: yes
+  when: map_local_folder|bool == false
+
+
+- name: Check config-dist.php exists in root directory
+  stat:
+    path: /var/www/opencart/upload/config-dist.php
+  register: config_dist
+
+
+- name: Check config-dist.php exists in admin directory
+  stat:
+    path: /var/www/opencart/upload/admin/config-dist.php
+  register: admin_config_dist
+
+
+- name: Rename opencart config file
+  become: yes
+  command: mv /var/www/opencart/upload/config-dist.php /var/www/opencart/upload/config.php
+  when: config_dist.stat.exists
+
+
+- name: Rename opencart admin config file
+  become: yes
+  command: mv /var/www/opencart/upload/admin/config-dist.php /var/www/opencart/upload/admin/config.php
+  when: admin_config_dist.stat.exists
+
+
+- name: Change proper ownership to the opencart directory
+  become: yes
+  file:
+    path: /var/www/opencart
+    owner: "www-data"
+    group: "www-data"
+    mode: u=rwX,g=rX,o=rX
+    recurse: yes
+
+
+- name: Create self-signed certificate
+  command: >
+    openssl req -x509 -nodes -subj '/CN={{ opencart_domain_name }}' -days 365
+    -newkey rsa:4096 -sha256 -keyout {{ item.key }} -out {{ item.cert }}
+    creates={{ item.cert }}
+  with_items: "{{ self_signed_certs }}"
+
+
+- name: Copy and apply nginx opencart config
+  become: yes
+  template:
+    src: templates/opencart.conf
+    dest: /etc/nginx/sites-enabled
+
+
+- name: Restart nginx service
+  become: yes
+  service:
+    name: nginx
+    state: restarted

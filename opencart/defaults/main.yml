@@ -1,0 +1,14 @@
+---
+# defaults file for opencart
+install_configure_mysql: true
+map_local_folder: false
+create_opencart_database: true
+opencart_domain_name: localhost
+mysql_root_password: someStrongPassword
+opencart_database_name: storeDBName
+opencart_database_user: opencartDBUser
+opencart_database_password: someStrongPassword
+
+self_signed_certs:
+  - key: /etc/ssl/private/server.key
+    cert: /etc/ssl/certs/server.crt

@@ -1,0 +1,4 @@
+.vagrant/
+*.log
+github_pat
+test-playbook.yml

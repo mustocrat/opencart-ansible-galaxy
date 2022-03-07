@@ -1,0 +1,16 @@
+galaxy_info:
+  author: Mustafa Saadi (0p0inter)
+  description: Ansible role to install and configure OpenCart 3.x on Ubuntu 20.x
+  company: Stellar Labs
+  license: MIT
+  min_ansible_version: 2.1
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal
+        - bionic
+  galaxy_tags:
+    - ecommerce
+    - opencart 3.x
+
+dependencies: []

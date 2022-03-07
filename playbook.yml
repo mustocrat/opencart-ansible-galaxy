@@ -1,0 +1,16 @@
+---
+- hosts: all
+  vars:
+    install_configure_mysql: true
+    map_local_folder: false
+    create_opencart_database: true
+    opencart_domain_name: somedomain.co.il
+    mysql_root_password: awTdtyAbK2f0
+    opencart_database_name: somedomain
+    opencart_database_user: opencart
+    opencart_database_password: PYr2qpk1dZoE
+    self_signed_certs:
+      - key: /etc/ssl/private/somedomain.co.il.key
+        cert: /etc/ssl/certs/somedomain.co.il.crt
+  roles:
+    - role: opencart
